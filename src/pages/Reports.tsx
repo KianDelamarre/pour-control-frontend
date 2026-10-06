@@ -51,10 +51,11 @@ export function Reports() {
                 {/* Controls Bar: Date Picker + Generate Action */}
                 <form onSubmit={handleGenerateReport} className="flex items-center gap-3 w-full sm:w-auto">
                     <Popover>
-                        <PopoverTrigger asChild>
+                        <PopoverTrigger>
                             <Button
                                 variant="outline"
-                                className={`w-[220px] justify-start text-left font-normal ${!date && "text-muted-foreground"}`}
+                                type="button"
+                                className={`w-[220px] justify-start text-left font-normal ${!date ? "text-muted-foreground" : ""}`}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -65,7 +66,7 @@ export function Reports() {
                                 mode="single"
                                 selected={date}
                                 onSelect={setDate}
-                                initialFocus
+                                autoFocus
                             />
                         </PopoverContent>
                     </Popover>

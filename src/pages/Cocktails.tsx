@@ -25,7 +25,7 @@ interface Cocktail {
 }
 
 export function Cocktails() {
-    const [cocktails, setCocktails] = useState<Cocktail[]>([
+    const [cocktails] = useState<Cocktail[]>([
         {
             id: 1,
             name: "Espresso Martini",
@@ -219,10 +219,6 @@ export function Cocktails() {
                                     onChange={(e) => setNewCocktail({ ...newCocktail, name: e.target.value })}
                                 />
                             </div>
-
-
-
-
                         </div>
 
                         <DialogFooter>
