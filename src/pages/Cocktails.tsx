@@ -20,12 +20,24 @@ import { Wine, Info, Plus } from "lucide-react"
 const API_URL = "http://localhost:8080";
 
 
-interface Cocktail {
-    id: number
-    name: string
-    description: string
-    ingredients: string[]
-    instructions: string[]
+export interface InventoryItem {
+    id: number;
+    name: string;
+    mlInStock: number;
+    mlTarget: number;
+}
+
+export interface RecipeItem {
+    id: number;
+    stockIngredient: InventoryItem;
+    mlRequired: number;
+}
+
+export interface Cocktail {
+    id: number;
+    name: string;
+    instructions: string;
+    recipeIngredients: RecipeItem[];
 }
 
 
@@ -88,7 +100,7 @@ export function Cocktails() {
 
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [selectedCocktail, setSelectedCocktail] = useState<Cocktail | null>(null)
 
     // State for Add Cocktail Modal & Form Inputs
@@ -124,16 +136,46 @@ export function Cocktails() {
     }, []);
 
 
+
+
+    const handleAddCocktail = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // Basic validation
+        if (!newCocktail.name.trim()) {
+            setErrorMessage("Please enter a cocktail name.");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            setErrorMessage(null);
+
+            // POST request sending only the cocktail name payload
+            const response = await axios.post<Cocktail>(`${API_URL}/api/cocktails`, newCocktail);
+
+            // Update local state by appending the created cocktail
+            setCocktails((prev) => [...prev, response.data]);
+
+            // Reset state & close modal
+            setNewCocktail({ name: "" });
+            setIsAddOpen(false);
+        } catch (err) {
+            if (axios.isAxiosError(err)) {
+                setErrorMessage(err.response?.data?.message || err.message);
+            } else {
+                setErrorMessage(err instanceof Error ? err.message : "Failed to add cocktail");
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+
+
+
     if (isLoading) return <div>Loading inventory...</div>;
     if (errorMessage) return <div>Error: {errorMessage}</div>;
-
-
-
-    // Form Submit Handler
-    const handleAddCocktail = (e: React.FormEvent) => {
-        e.preventDefault()
-
-    }
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -171,9 +213,9 @@ export function Cocktails() {
                                     Ingredients
                                 </h4>
                                 <ul className="text-xs text-foreground/80 space-y-1 list-disc list-inside">
-                                    {cocktail.ingredients.map((item, idx) => (
-                                        <li key={idx} className="truncate">
-                                            {item}
+                                    {cocktail.recipeIngredients.map((item) => (
+                                        <li key={item.id} className="truncate">
+                                            {item.mlRequired}ml {item.stockIngredient.name}
                                         </li>
                                     ))}
                                 </ul>
@@ -194,7 +236,6 @@ export function Cocktails() {
                 ))}
             </div>
 
-            {/* More Info Modal */}
             <Dialog open={!!selectedCocktail} onOpenChange={(open) => !open && setSelectedCocktail(null)}>
                 <DialogContent className="sm:max-w-[450px]">
                     <DialogHeader>
@@ -202,8 +243,8 @@ export function Cocktails() {
                             <Wine className="h-5 w-5 text-primary" />
                             <DialogTitle className="text-xl">{selectedCocktail?.name}</DialogTitle>
                         </div>
-                        <DialogDescription className="pt-1 text-sm text-muted-foreground">
-                            {selectedCocktail?.description}
+                        <DialogDescription className="pt-1 text-sm text-muted-foreground whitespace-pre-line">
+                            {selectedCocktail?.instructions}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -214,27 +255,15 @@ export function Cocktails() {
                                 Ingredients
                             </h4>
                             <ul className="grid grid-cols-2 gap-1.5 text-sm">
-                                {selectedCocktail?.ingredients.map((ingredient, index) => (
-                                    <li key={index} className="flex items-center gap-2 text-foreground/90 font-medium">
+                                {selectedCocktail?.recipeIngredients.map((item) => (
+                                    <li key={item.id} className="flex items-center gap-2 text-foreground/90 font-medium">
                                         <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                                        {ingredient}
+                                        <span>
+                                            {item.mlRequired}ml {item.stockIngredient.name}
+                                        </span>
                                     </li>
                                 ))}
                             </ul>
-                        </div>
-
-                        {/* Preparation Steps Section */}
-                        <div className="space-y-2 pt-2 border-t">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                Preparation Steps
-                            </h4>
-                            <ol className="list-decimal list-inside space-y-2 text-sm">
-                                {selectedCocktail?.instructions.map((step, index) => (
-                                    <li key={index} className="leading-relaxed pl-1">
-                                        {step}
-                                    </li>
-                                ))}
-                            </ol>
                         </div>
                     </div>
                 </DialogContent>
