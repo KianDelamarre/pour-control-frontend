@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from 'axios';
 import {
     Card,
     CardContent,
@@ -21,22 +22,59 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Pencil } from "lucide-react"
 
+
+const API_URL = "http://localhost:8080";
+
+
 interface InventoryItem {
     id: number
     name: string
-    stock: number
-    target: number
+    mlInStock: number
+    mlTarget: number
 }
 
 export function Inventory() {
-    const [items, setItems] = useState<InventoryItem[]>([
-        { id: 1, name: "Vodka", stock: 7000, target: 10000 },
-        { id: 2, name: "Whiskey", stock: 4500, target: 10000 },
-        { id: 3, name: "Tequila", stock: 2000, target: 10000 },
-        { id: 4, name: "Pink Gin", stock: 7000, target: 10000 },
-        { id: 5, name: "Gin", stock: 8500, target: 10000 },
-        { id: 6, name: "Prosecco", stock: 1500, target: 10000 },
-    ])
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [items, setItems] = useState<InventoryItem[]>([]);
+
+    // const [items, setItems] = useState<InventoryItem[]>([
+    //     { id: 1, name: "Vodka", stock: 7000, target: 10000 },
+    //     { id: 2, name: "Whiskey", stock: 4500, target: 10000 },
+    //     { id: 3, name: "Tequila", stock: 2000, target: 10000 },
+    //     { id: 4, name: "Pink Gin", stock: 7000, target: 10000 },
+    //     { id: 5, name: "Gin", stock: 8500, target: 10000 },
+    //     { id: 6, name: "Prosecco", stock: 1500, target: 10000 },
+    // ])
+
+    const fetchItems = async () => {
+        try {
+            setIsLoading(true);
+            setErrorMessage(null);
+
+            // Axios automatically parses JSON and throws on non-2xx status codes
+            const response = await axios.get<InventoryItem[]>(`${API_URL}/api/stock`);
+
+            setItems(response.data); // Access the response data directly
+        } catch (err) {
+            // Handling Axios error objects vs generic errors
+            if (axios.isAxiosError(err)) {
+                setErrorMessage(err.response?.data?.message || err.message);
+            } else {
+                setErrorMessage(err instanceof Error ? err.message : "An unknown error occurred");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchItems();
+    }, []);
+
+
+
 
     // Track item being edited in modal
     const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
@@ -44,19 +82,48 @@ export function Inventory() {
 
     const handleOpenEdit = (item: InventoryItem) => {
         setEditingItem(item)
-        setNewStock(item.stock)
+        setNewStock(item.mlInStock)
     }
 
-    const handleSave = () => {
-        if (!editingItem) return
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === editingItem.id ? { ...item, stock: newStock } : item
-            )
-        )
-        setEditingItem(null)
-    }
+    const handleSave = async () => {
+        if (!editingItem) return;
 
+        try {
+            setIsSaving(true);
+            setErrorMessage(null);
+
+            // 1. Send PATCH request using axios
+            // axios automatically converts objects to JSON and throws if status isn't 2xx
+            await axios.put(`${API_URL}/api/stock/updateQuantity/${editingItem.id}`, {
+                "quantity": newStock,
+            });
+
+            // 2. On success, update React state locally
+            setItems((prev) =>
+                prev.map((item) =>
+                    item.id === editingItem.id ? { ...item, mlInStock: newStock } : item
+                )
+            );
+
+            // 3. Reset state & close modal
+            setEditingItem(null);
+
+        } catch (error) {
+            console.error("Save error:", error);
+
+            // Handle standard Axios error object safely
+            if (axios.isAxiosError(error)) {
+                setErrorMessage(error.response?.data?.message || "Failed to save stock update.");
+            } else {
+                setErrorMessage("An unexpected error occurred.");
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) return <div>Loading inventory...</div>;
+    if (errorMessage) return <div>Error: {errorMessage}</div>;
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between items-center pb-4 border-b">
@@ -71,7 +138,7 @@ export function Inventory() {
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {items.map((item) => {
-                    const percentage = Math.min(100, Math.round((item.stock / item.target) * 100))
+                    const percentage = Math.min(100, Math.round((item.mlInStock / item.mlTarget) * 100))
                     const isLowStock = percentage < 30
 
                     return (
@@ -100,11 +167,11 @@ export function Inventory() {
                                 <div className="space-y-2 pt-2 text-sm border-t">
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Current Stock:</span>
-                                        <span className="font-semibold">{item.stock.toLocaleString()} ml</span>
+                                        <span className="font-semibold">{item.mlInStock.toLocaleString()} ml</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Target Stock:</span>
-                                        <span className="font-semibold">{item.target.toLocaleString()} ml</span>
+                                        <span className="font-semibold">{item.mlTarget.toLocaleString()} ml</span>
                                     </div>
                                 </div>
 

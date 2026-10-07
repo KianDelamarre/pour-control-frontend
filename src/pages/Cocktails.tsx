@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react";
+import axios from 'axios';
 import {
     Card,
     CardContent,
@@ -16,6 +17,9 @@ import {
 } from "@/components/ui/dialog"
 import { Wine, Info, Plus } from "lucide-react"
 
+const API_URL = "http://localhost:8080";
+
+
 interface Cocktail {
     id: number
     name: string
@@ -24,59 +28,67 @@ interface Cocktail {
     instructions: string[]
 }
 
+
+
 export function Cocktails() {
-    const [cocktails] = useState<Cocktail[]>([
-        {
-            id: 1,
-            name: "Espresso Martini",
-            description: "A rich, smooth cocktail made with vodka, fresh espresso, and coffee liqueur.",
-            ingredients: ["50ml Vodka", "30ml Coffee Liqueur", "30ml Fresh Espresso"],
-            instructions: [
-                "Add vodka, espresso, and coffee liqueur into a shaker filled with ice.",
-                "Shake vigorously for 15–20 seconds to create a foam layer.",
-                "Strain into a chilled martini glass.",
-                "Garnish with three coffee beans.",
-            ],
-        },
-        {
-            id: 2,
-            name: "Margarita",
-            description: "A classic cocktail featuring tequila, fresh lime juice, and triple sec.",
-            ingredients: ["50ml Tequila", "25ml Fresh Lime Juice", "20ml Triple Sec"],
-            instructions: [
-                "Rub a lime wedge around the rim of the glass and dip in salt.",
-                "Combine tequila, lime juice, and triple sec in a shaker with ice.",
-                "Shake well and strain into the salt-rimmed glass filled with fresh ice.",
-                "Garnish with a lime wheel.",
-            ],
-        },
-        {
-            id: 3,
-            name: "Negroni",
-            description: "An Italian classic made of equal parts gin, vermouth rouge, and Campari.",
-            ingredients: ["30ml Gin", "30ml Sweet Vermouth", "30ml Campari"],
-            instructions: [
-                "Add gin, sweet vermouth, and Campari to a mixing glass filled with ice.",
-                "Stir until well chilled (about 20-30 seconds).",
-                "Strain into a rocks glass over a large ice cube.",
-                "Garnish with an orange peel.",
-            ],
-        },
-        {
-            id: 4,
-            name: "Old Fashioned",
-            description: "A timeless whiskey drink sweetened with sugar and flavored with bitters.",
-            ingredients: ["60ml Bourbon/Rye Whiskey"],
-            instructions: [
-                "Muddle sugar cube and bitters with a splash of water in a glass.",
-                "Add whiskey and a large ice cube.",
-                "Stir gently until chilled.",
-                "Express orange peel oil over the glass and drop in as garnish.",
-            ],
-        },
-    ])
+    // const [cocktails] = useState<Cocktail[]>([
+    //     {
+    //         id: 1,
+    //         name: "Espresso Martini",
+    //         description: "A rich, smooth cocktail made with vodka, fresh espresso, and coffee liqueur.",
+    //         ingredients: ["50ml Vodka", "30ml Coffee Liqueur", "30ml Fresh Espresso"],
+    //         instructions: [
+    //             "Add vodka, espresso, and coffee liqueur into a shaker filled with ice.",
+    //             "Shake vigorously for 15–20 seconds to create a foam layer.",
+    //             "Strain into a chilled martini glass.",
+    //             "Garnish with three coffee beans.",
+    //         ],
+    //     },
+    //     {
+    //         id: 2,
+    //         name: "Margarita",
+    //         description: "A classic cocktail featuring tequila, fresh lime juice, and triple sec.",
+    //         ingredients: ["50ml Tequila", "25ml Fresh Lime Juice", "20ml Triple Sec"],
+    //         instructions: [
+    //             "Rub a lime wedge around the rim of the glass and dip in salt.",
+    //             "Combine tequila, lime juice, and triple sec in a shaker with ice.",
+    //             "Shake well and strain into the salt-rimmed glass filled with fresh ice.",
+    //             "Garnish with a lime wheel.",
+    //         ],
+    //     },
+    //     {
+    //         id: 3,
+    //         name: "Negroni",
+    //         description: "An Italian classic made of equal parts gin, vermouth rouge, and Campari.",
+    //         ingredients: ["30ml Gin", "30ml Sweet Vermouth", "30ml Campari"],
+    //         instructions: [
+    //             "Add gin, sweet vermouth, and Campari to a mixing glass filled with ice.",
+    //             "Stir until well chilled (about 20-30 seconds).",
+    //             "Strain into a rocks glass over a large ice cube.",
+    //             "Garnish with an orange peel.",
+    //         ],
+    //     },
+    //     {
+    //         id: 4,
+    //         name: "Old Fashioned",
+    //         description: "A timeless whiskey drink sweetened with sugar and flavored with bitters.",
+    //         ingredients: ["60ml Bourbon/Rye Whiskey"],
+    //         instructions: [
+    //             "Muddle sugar cube and bitters with a splash of water in a glass.",
+    //             "Add whiskey and a large ice cube.",
+    //             "Stir gently until chilled.",
+    //             "Express orange peel oil over the glass and drop in as garnish.",
+    //         ],
+    //     },
+    // ])
 
     // State for More Info Modal
+
+    const [cocktails, setCocktails] = useState<Cocktail[]>([]);
+
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
     const [selectedCocktail, setSelectedCocktail] = useState<Cocktail | null>(null)
 
     // State for Add Cocktail Modal & Form Inputs
@@ -84,6 +96,38 @@ export function Cocktails() {
     const [newCocktail, setNewCocktail] = useState({
         name: ""
     })
+
+
+    const fetchCocktails = async () => {
+        try {
+            setIsLoading(true);
+            setErrorMessage(null);
+
+            // Axios automatically parses JSON and throws on non-2xx status codes
+            const response = await axios.get<Cocktail[]>(`${API_URL}/api/cocktails`);
+
+            setCocktails(response.data); // Access the response data directly
+        } catch (err) {
+            // Handling Axios error objects vs generic errors
+            if (axios.isAxiosError(err)) {
+                setErrorMessage(err.response?.data?.message || err.message);
+            } else {
+                setErrorMessage(err instanceof Error ? err.message : "An unknown error occurred");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCocktails();
+    }, []);
+
+
+    if (isLoading) return <div>Loading inventory...</div>;
+    if (errorMessage) return <div>Error: {errorMessage}</div>;
+
+
 
     // Form Submit Handler
     const handleAddCocktail = (e: React.FormEvent) => {
