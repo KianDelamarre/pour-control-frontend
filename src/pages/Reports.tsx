@@ -3,7 +3,6 @@ import { format } from "date-fns"
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
     Card,
-    CardContent,
     CardHeader,
     CardTitle,
     CardDescription,

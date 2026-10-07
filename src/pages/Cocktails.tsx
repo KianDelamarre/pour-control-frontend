@@ -337,10 +337,17 @@ export function Cocktails() {
                         </div>
 
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsAddOpen(false)}
+                                disabled={isSubmitting}
+                            >
                                 Cancel
                             </Button>
-                            <Button type="submit">Save Cocktail</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? "Saving..." : "Save Cocktail"}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

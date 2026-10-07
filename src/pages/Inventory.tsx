@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Pencil, Target, Loader2 } from "lucide-react"
+import { Pencil, Target } from "lucide-react"
 
 const API_URL = "http://localhost:8080";
 
@@ -144,7 +144,6 @@ export function Inventory() {
     if (isLoading) {
         return <LoadingSpinner text="Loading inventory..." />;
     }
-
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-6">
