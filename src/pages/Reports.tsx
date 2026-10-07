@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import { format } from "date-fns"
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
     Card,
     CardContent,
@@ -81,12 +82,7 @@ export function Reports() {
             {/* Main Content Area */}
             {isLoading ? (
                 /* Loading State */
-                <Card className="min-h-[400px] flex items-center justify-center">
-                    <CardContent className="flex flex-col items-center justify-center text-center py-12 space-y-3">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm font-medium">Calculating daily sales & depletion metrics...</p>
-                    </CardContent>
-                </Card>
+                <LoadingSpinner text="Calculating daily sales & depletion metrics..." />
             ) : hasReport ? (
                 /* Report Active State */
                 <div className="space-y-4">

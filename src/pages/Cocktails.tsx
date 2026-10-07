@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from 'axios';
+import { ErrorModal } from "../components/ErrorModal";
+import { LoadingSpinner } from "../components/LoadingSpinner";
+
 import {
     Card,
     CardContent,
@@ -197,8 +200,11 @@ export function Cocktails() {
 
 
 
-    if (isLoading) return <div>Loading inventory...</div>;
-    if (errorMessage) return <div>Error: {errorMessage}</div>;
+    if (isLoading) {
+        return <LoadingSpinner text="Loading cocktails..." />;
+    }
+
+    // if (errorMessage) return <div>Error: {errorMessage}</div>;
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -218,7 +224,7 @@ export function Cocktails() {
 
             {/* Grid of Cocktail Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {cocktails.map((cocktail) => (
+                {cocktails?.map((cocktail) => (
                     <Card key={cocktail.id} className="flex flex-col justify-between">
                         <div>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -249,7 +255,7 @@ export function Cocktails() {
                                     Ingredients
                                 </h4>
                                 <ul className="text-xs text-foreground/80 space-y-1 list-disc list-inside">
-                                    {cocktail.recipeIngredients.map((item) => (
+                                    {cocktail.recipeIngredients?.map((item) => (
                                         <li key={item.id} className="truncate">
                                             {item.mlRequired}ml {item.stockIngredient.name}
                                         </li>
@@ -291,7 +297,7 @@ export function Cocktails() {
                                 Ingredients
                             </h4>
                             <ul className="grid grid-cols-2 gap-1.5 text-sm">
-                                {selectedCocktail?.recipeIngredients.map((item) => (
+                                {selectedCocktail?.recipeIngredients?.map((item) => (
                                     <li key={item.id} className="flex items-center gap-2 text-foreground/90 font-medium">
                                         <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                                         <span>
@@ -339,6 +345,12 @@ export function Cocktails() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* Global Error Popup Dialog */}
+            <ErrorModal
+                errorMessage={errorMessage}
+                onClose={() => setErrorMessage(null)}
+            />
         </div>
     )
 }

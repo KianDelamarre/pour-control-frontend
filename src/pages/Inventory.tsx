@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 import axios from 'axios';
+import { ErrorModal } from "../components/ErrorModal";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
     Card,
     CardContent,
@@ -20,11 +22,9 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Pencil } from "lucide-react"
-
+import { Pencil, Target, Loader2 } from "lucide-react"
 
 const API_URL = "http://localhost:8080";
-
 
 interface InventoryItem {
     id: number
@@ -39,26 +39,22 @@ export function Inventory() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [items, setItems] = useState<InventoryItem[]>([]);
 
-    // const [items, setItems] = useState<InventoryItem[]>([
-    //     { id: 1, name: "Vodka", stock: 7000, target: 10000 },
-    //     { id: 2, name: "Whiskey", stock: 4500, target: 10000 },
-    //     { id: 3, name: "Tequila", stock: 2000, target: 10000 },
-    //     { id: 4, name: "Pink Gin", stock: 7000, target: 10000 },
-    //     { id: 5, name: "Gin", stock: 8500, target: 10000 },
-    //     { id: 6, name: "Prosecco", stock: 1500, target: 10000 },
-    // ])
+    // Edit Stock State
+    const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+    const [newStock, setNewStock] = useState<number>(0);
+
+    // Edit Target State
+    const [editingTargetItem, setEditingTargetItem] = useState<InventoryItem | null>(null);
+    const [newTarget, setNewTarget] = useState<number>(0);
 
     const fetchItems = async () => {
         try {
             setIsLoading(true);
             setErrorMessage(null);
 
-            // Axios automatically parses JSON and throws on non-2xx status codes
             const response = await axios.get<InventoryItem[]>(`${API_URL}/api/stock`);
-
-            setItems(response.data); // Access the response data directly
+            setItems(response.data);
         } catch (err) {
-            // Handling Axios error objects vs generic errors
             if (axios.isAxiosError(err)) {
                 setErrorMessage(err.response?.data?.message || err.message);
             } else {
@@ -73,17 +69,11 @@ export function Inventory() {
         fetchItems();
     }, []);
 
-
-
-
-    // Track item being edited in modal
-    const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
-    const [newStock, setNewStock] = useState<number>(0)
-
+    // Handlers for Stock Editing
     const handleOpenEdit = (item: InventoryItem) => {
-        setEditingItem(item)
-        setNewStock(item.mlInStock)
-    }
+        setEditingItem(item);
+        setNewStock(item.mlInStock);
+    };
 
     const handleSave = async () => {
         if (!editingItem) return;
@@ -92,26 +82,19 @@ export function Inventory() {
             setIsSaving(true);
             setErrorMessage(null);
 
-            // 1. Send PATCH request using axios
-            // axios automatically converts objects to JSON and throws if status isn't 2xx
             await axios.put(`${API_URL}/api/stock/updateQuantity/${editingItem.id}`, {
                 "quantity": newStock,
             });
 
-            // 2. On success, update React state locally
             setItems((prev) =>
-                prev.map((item) =>
+                prev?.map((item) =>
                     item.id === editingItem.id ? { ...item, mlInStock: newStock } : item
                 )
             );
 
-            // 3. Reset state & close modal
             setEditingItem(null);
-
         } catch (error) {
             console.error("Save error:", error);
-
-            // Handle standard Axios error object safely
             if (axios.isAxiosError(error)) {
                 setErrorMessage(error.response?.data?.message || "Failed to save stock update.");
             } else {
@@ -122,8 +105,47 @@ export function Inventory() {
         }
     };
 
-    if (isLoading) return <div>Loading inventory...</div>;
-    if (errorMessage) return <div>Error: {errorMessage}</div>;
+    // Handlers for Target Editing
+    const handleOpenEditTarget = (item: InventoryItem) => {
+        setEditingTargetItem(item);
+        setNewTarget(item.mlTarget);
+    };
+
+    const handleSaveTarget = async () => {
+        if (!editingTargetItem) return;
+
+        try {
+            setIsSaving(true);
+            setErrorMessage(null);
+
+            await axios.put(`${API_URL}/api/stock/updateTargetQuantity/${editingTargetItem.id}`, {
+                "quantity": newTarget,
+            });
+
+            setItems((prev) =>
+                prev?.map((item) =>
+                    item.id === editingTargetItem.id ? { ...item, mlTarget: newTarget } : item
+                )
+            );
+
+            setEditingTargetItem(null);
+        } catch (error) {
+            console.error("Save target error:", error);
+            if (axios.isAxiosError(error)) {
+                setErrorMessage(error.response?.data?.message || "Failed to save target stock update.");
+            } else {
+                setErrorMessage("An unexpected error occurred.");
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) {
+        return <LoadingSpinner text="Loading inventory..." />;
+    }
+
+
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-6">
             <div className="flex justify-between items-center pb-4 border-b">
@@ -137,9 +159,22 @@ export function Inventory() {
 
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map((item) => {
-                    const percentage = Math.min(100, Math.round((item.mlInStock / item.mlTarget) * 100))
-                    const isLowStock = percentage < 30
+                {items?.map((item) => {
+                    const target = item.mlTarget || 0;
+                    const rawPercentage = target > 0 ? (item.mlInStock / target) * 100 : 0;
+                    const actualPercentage = Math.round(rawPercentage) || 0;
+                    const progressValue = Math.min(100, Math.max(0, actualPercentage));
+
+                    const isOutOfStock = item.mlInStock <= 0;
+                    const isLowStock = !isOutOfStock && actualPercentage < 30;
+
+                    const getBadgeConfig = () => {
+                        if (isOutOfStock) return { label: "Out of Stock", variant: "destructive" as const };
+                        if (isLowStock) return { label: "Low Stock", variant: "outline" as const };
+                        return { label: "In Stock", variant: "secondary" as const };
+                    };
+
+                    const badge = getBadgeConfig();
 
                     return (
                         <Card key={item.id} className="border shadow-sm hover:shadow-md transition-shadow">
@@ -148,22 +183,20 @@ export function Inventory() {
                                     <CardTitle className="text-lg font-bold">{item.name}</CardTitle>
                                     <CardDescription>Item #{item.id}</CardDescription>
                                 </div>
-                                <Badge variant={isLowStock ? "destructive" : "secondary"}>
-                                    {isLowStock ? "Low Stock" : "In Stock"}
+                                <Badge variant={badge.variant}>
+                                    {badge.label}
                                 </Badge>
                             </CardHeader>
 
                             <CardContent className="space-y-4">
-                                {/* Visual Capacity Bar */}
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between text-xs font-medium text-muted-foreground">
                                         <span>Capacity Fill</span>
-                                        <span className="font-semibold text-foreground">{percentage}%</span>
+                                        <span className="font-semibold text-foreground">{actualPercentage}%</span>
                                     </div>
-                                    <Progress value={percentage} className="h-2" />
+                                    <Progress value={progressValue} className="h-2" />
                                 </div>
 
-                                {/* Clean Metrics Display */}
                                 <div className="space-y-2 pt-2 text-sm border-t">
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Current Stock:</span>
@@ -175,22 +208,33 @@ export function Inventory() {
                                     </div>
                                 </div>
 
-                                {/* Edit / Restock Action */}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full mt-2 gap-2 text-xs"
-                                    onClick={() => handleOpenEdit(item)}
-                                >
-                                    <Pencil className="h-3.5 w-3.5" /> Edit Stock Level
-                                </Button>
+                                {/* Action Buttons */}
+                                <div className="space-y-2 pt-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full gap-2 text-xs"
+                                        onClick={() => handleOpenEditTarget(item)}
+                                    >
+                                        <Target className="h-3.5 w-3.5" /> Edit Target Level
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full gap-2 text-xs"
+                                        onClick={() => handleOpenEdit(item)}
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" /> Edit Stock Level
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     )
                 })}
             </div>
 
-            {/* Edit / Restock Modal */}
+            {/* Edit Stock Modal */}
             <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
@@ -221,13 +265,62 @@ export function Inventory() {
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditingItem(null)}>
+                        <Button variant="outline" onClick={() => setEditingItem(null)} disabled={isSaving}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave}>Save Changes</Button>
+                        <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? "Saving..." : "Save Changes"}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Edit Target Modal */}
+            <Dialog open={!!editingTargetItem} onOpenChange={(open) => !open && setEditingTargetItem(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Update Target — {editingTargetItem?.name}</DialogTitle>
+                        <DialogDescription>
+                            Set the standard baseline target volume for this inventory item.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="target" className="text-right">
+                                Target (ml)
+                            </Label>
+                            <div className="col-span-3 relative">
+                                <Input
+                                    id="target"
+                                    type="number"
+                                    value={newTarget}
+                                    onChange={(e) => setNewTarget(Number(e.target.value))}
+                                    className="pr-10"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                                    ml
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditingTargetItem(null)} disabled={isSaving}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveTarget} disabled={isSaving}>
+                            {isSaving ? "Saving..." : "Save Target"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Global Error Popup Dialog */}
+            <ErrorModal
+                errorMessage={errorMessage}
+                onClose={() => setErrorMessage(null)}
+            />
         </div>
     )
 }
