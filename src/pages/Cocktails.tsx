@@ -15,7 +15,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog"
-import { Wine, Info, Plus } from "lucide-react"
+import { Wine, Info, Plus, Trash2 } from "lucide-react"
 
 const API_URL = "http://localhost:8080";
 
@@ -171,6 +171,29 @@ export function Cocktails() {
         }
     };
 
+    const handleDeleteCocktail = async (id: number) => {
+        // ask for confirmation before deleting
+        if (!window.confirm("Are you sure you want to delete this cocktail?")) {
+            return;
+        }
+
+        try {
+            setErrorMessage(null);
+
+            // Call backend API to delete cocktail
+            await axios.delete(`${API_URL}/api/cocktails/${id}`);
+
+            // Update state by filtering out the deleted cocktail
+            setCocktails((prev) => prev.filter((cocktail) => cocktail.id !== id));
+        } catch (err) {
+            if (axios.isAxiosError(err)) {
+                setErrorMessage(err.response?.data?.message || err.message);
+            } else {
+                setErrorMessage(err instanceof Error ? err.message : "Failed to delete cocktail");
+            }
+        }
+    };
+
 
 
 
@@ -198,13 +221,26 @@ export function Cocktails() {
                 {cocktails.map((cocktail) => (
                     <Card key={cocktail.id} className="flex flex-col justify-between">
                         <div>
-                            <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
-                                <div className="p-2.5 bg-muted rounded-md flex items-center justify-center shrink-0">
-                                    <Wine className="h-5 w-5 text-primary" />
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-muted rounded-md flex items-center justify-center shrink-0">
+                                        <Wine className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <CardTitle className="text-base font-semibold leading-tight">
+                                        {cocktail.name}
+                                    </CardTitle>
                                 </div>
-                                <CardTitle className="text-base font-semibold leading-tight">
-                                    {cocktail.name}
-                                </CardTitle>
+
+                                {/* Delete Button */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                                    onClick={() => handleDeleteCocktail(cocktail.id)}
+                                    title="Delete cocktail"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
                             </CardHeader>
 
                             {/* Ingredients List on Card */}
