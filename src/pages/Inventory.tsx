@@ -26,7 +26,7 @@ import { Pencil, Target } from "lucide-react"
 
 const API_URL = "http://localhost:8080";
 
-interface InventoryItem {
+interface IngredientStock {
     id: number
     name: string
     mlInStock: number
@@ -37,14 +37,14 @@ export function Inventory() {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [items, setItems] = useState<InventoryItem[]>([]);
+    const [items, setItems] = useState<IngredientStock[]>([]);
 
     // Edit Stock State
-    const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+    const [editingItem, setEditingItem] = useState<IngredientStock | null>(null);
     const [newStock, setNewStock] = useState<number>(0);
 
     // Edit Target State
-    const [editingTargetItem, setEditingTargetItem] = useState<InventoryItem | null>(null);
+    const [editingTargetItem, setEditingTargetItem] = useState<IngredientStock | null>(null);
     const [newTarget, setNewTarget] = useState<number>(0);
 
     const fetchItems = async () => {
@@ -52,7 +52,7 @@ export function Inventory() {
             setIsLoading(true);
             setErrorMessage(null);
 
-            const response = await axios.get<InventoryItem[]>(`${API_URL}/api/stock`);
+            const response = await axios.get<IngredientStock[]>(`${API_URL}/api/stock`);
             setItems(response.data);
         } catch (err) {
             if (axios.isAxiosError(err)) {
@@ -70,7 +70,7 @@ export function Inventory() {
     }, []);
 
     // Handlers for Stock Editing
-    const handleOpenEdit = (item: InventoryItem) => {
+    const handleOpenEdit = (item: IngredientStock) => {
         setEditingItem(item);
         setNewStock(item.mlInStock);
     };
@@ -106,7 +106,7 @@ export function Inventory() {
     };
 
     // Handlers for Target Editing
-    const handleOpenEditTarget = (item: InventoryItem) => {
+    const handleOpenEditTarget = (item: IngredientStock) => {
         setEditingTargetItem(item);
         setNewTarget(item.mlTarget);
     };

@@ -91,8 +91,11 @@ export function DailyCloseout() {
         const payload = {
             cocktailCloseout: cocktails.reduce((acc, cocktail) => {
                 const value = salesCounts[cocktail.id];
-                if (value !== undefined && value !== null && value !== "") {
+                // If value is a valid non-empty string, parse it; otherwise default to 0
+                if (value !== undefined && value !== null && value.trim() !== "") {
                     acc[cocktail.id] = Number(value);
+                } else {
+                    acc[cocktail.id] = 0;
                 }
                 return acc;
             }, {} as Record<string | number, number>),
