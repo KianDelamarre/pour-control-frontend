@@ -19,6 +19,27 @@ body {
   min-height: 100vh;
 }
 
+body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  /* Set background image */
+  background-image: url("./assets/background.png");
+  background-size: cover;
+  background-position: center;
+
+  /* Reduce opacity of the image only */
+  opacity: 0.1;
+  /* Value from 0.0 to 1.0 */
+
+  z-index: -1;
+  /* Keep image behind the text */
+}
+
 #root {
   margin: 0;
   padding: 0;
@@ -149,9 +170,11 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
